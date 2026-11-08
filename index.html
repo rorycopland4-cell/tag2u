@@ -72,7 +72,7 @@ $('form').onsubmit=async e=>{e.preventDefault();const o=$('ownmsg');
   }catch(_){o.innerHTML='<div class="msg err">Something went wrong. Try again.</div>'}};
 function el(t,txt,cls,href){const x=document.createElement(t);x.textContent=txt;if(cls)x.className=cls;if(href)x.href=href;return x}
 async function lookup(){const id=norm($('fid').value),o=$('result');o.textContent='Looking…';$('msgbox').classList.add('hide');
-  try{const d=await api('lookup',{tagId:id});o.innerHTML='';
+  try{const d=await api('lookup',{tagId:id});o.innerHTML='';if(d.found)['name','school','item','phone','email'].forEach(k=>d[k]=String(d[k]??'').trim());
     if(!d.found){o.append(el('div','This tag isn\'t activated yet. If it\'s yours, activate it now.','msg err'));
       const b=el('button','Activate it');b.onclick=()=>{$('ids').value=id;go('own')};return o.append(b)}
     const c=el('div','','card');c.append(el('h3',(d.name||'Someone')+' owns this'));
@@ -81,7 +81,7 @@ async function lookup(){const id=norm($('fid').value),o=$('result');o.textConten
     if(d.email)c.append(el('a','✉️ Email '+d.email,'btn alt','mailto:'+encodeURI(d.email)));
     if(!d.phone&&!d.email)c.append(el('p','The owner prefers messages — use the form below.','hint'));
     o.append(c);$('msgbox').classList.remove('hide');
-  }catch(_){o.innerHTML='<div class="msg err">Couldn\'t look that up. Try again.</div>'}}
+  }catch(err){o.innerHTML='';o.append(el('div','Couldn\'t look that up. ('+err+')','msg err'))}}
 $('msgbox').onsubmit=async e=>{e.preventDefault();const o=$('sendmsg');o.textContent='Sending…';
   try{const r=await api('message',{tagId:norm($('fid').value),where:$('where').value,note:$('note').value,from:$('from').value});
     o.innerHTML=r.ok?'<div class="msg ok">Sent — thank you!</div>':'<div class="msg err">Couldn\'t send.</div>'}catch(_){o.innerHTML='<div class="msg err">Couldn\'t send.</div>'}};
