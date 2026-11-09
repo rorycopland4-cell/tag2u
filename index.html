@@ -16,8 +16,8 @@
     <label>Tag ID(s) <span class="hint">— on the tag. Got a bag? Put all the IDs in, separated by spaces or new lines.</span></label>
     <textarea id="ids" rows="2" required placeholder="T2U-AB12CD"></textarea>
     <label>Your name</label><input id="name" required maxlength="60">
-    <label>Phone number</label><input id="phone" type="tel" maxlength="30">
-    <label>Email <span class="hint">(parent/guardian email recommended)</span></label><input id="email" type="email" maxlength="80">
+    <label>Phone number (optional)</label><input id="phone" type="tel" maxlength="30">
+    <label>Email <span class="hint">— we email you here when someone finds your item (parent/guardian email recommended)</span></label><input id="email" type="email" maxlength="80" required>
     <label>School (optional)</label><input id="school" maxlength="80">
     <label>What's this tag on? (optional)</label><input id="item" maxlength="80" placeholder="e.g. Blue school bag">
     <label>What should finders see?</label>
@@ -61,7 +61,7 @@ function clearSaved(){localStorage.removeItem('t2u_owner');F.forEach(k=>$(k).val
 $('form').onsubmit=async e=>{e.preventDefault();const o=$('ownmsg');
   const tagIds=[...new Set($('ids').value.split(/[\s,;]+/).map(norm).filter(x=>x.length>=4))];
   if(!tagIds.length)return o.innerHTML='<div class="msg err">Enter a valid tag ID.</div>';
-  if(!$('phone').value&&!$('email').value)return o.innerHTML='<div class="msg err">Add a phone number or email.</div>';
+  if(!$('email').value.trim())return o.innerHTML='<div class="msg err">Add an email so we can notify you.</div>';
   const d={tagIds};F.forEach(k=>d[k]=$(k).value.trim());o.textContent='Saving…';
   try{const r=await api('activate',d);if(!r.ok)throw 0;
     const good=r.results.filter(x=>x.ok).map(x=>x.id),bad=r.results.filter(x=>!x.ok).map(x=>x.id);
