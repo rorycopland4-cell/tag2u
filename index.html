@@ -16,12 +16,10 @@
     <label>Tag ID(s) <span class="hint">— on the tag. Got a bag? Put all the IDs in, separated by spaces or new lines.</span></label>
     <textarea id="ids" rows="2" required placeholder="T2U-AB12CD"></textarea>
     <label>Your name</label><input id="name" required maxlength="60">
-    <label>Phone number (optional)</label><input id="phone" type="tel" maxlength="30">
+    <label>Phone number (optional — kept private)</label><input id="phone" type="tel" maxlength="30">
     <label>Email <span class="hint">— we email you here when someone finds your item (parent/guardian email recommended)</span></label><input id="email" type="email" maxlength="80" required>
     <label>School (optional)</label><input id="school" maxlength="80">
     <label>What's this tag on? (optional)</label><input id="item" maxlength="80" placeholder="e.g. Blue school bag">
-    <label>What should finders see?</label>
-    <select id="show"><option value="yes">My phone/email (fastest)</option><option value="no">Nothing — they can only send me a message</option></select>
     <button>Activate</button>
     <div id="saved" class="hint hide">Your details were filled in from your last tag. <a href="#" onclick="clearSaved();return false">Clear saved details</a></div>
     <div id="ownmsg"></div>
@@ -36,19 +34,19 @@
   </div>
   <div id="result"></div>
   <form class="card hide" id="msgbox">
-    <b>Send the owner a message</b>
+    <b>Email the owner</b><p class="hint">We'll email them straight away. Their details stay private.</p>
     <label>Where did you find it?</label>
     <select id="where"><option>School office / reception</option><option>PE department / changing rooms</option><option>Classroom / corridor</option><option>Bus / transport</option><option>Somewhere else</option></select>
     <label>Message</label><textarea id="note" rows="3" maxlength="500"></textarea>
     <label>Your contact (optional)</label><input id="from" maxlength="80">
-    <button>Notify the owner</button><div id="sendmsg"></div>
+    <button>Email the owner</button><div id="sendmsg"></div>
   </form>
 </section>
 </main>
 <script>
 const C=window.TAG2U,$=id=>document.getElementById(id),norm=s=>s.toUpperCase().replace(/[^A-Z0-9-]/g,'');
-const F=['name','phone','email','school','item','show'];
-function go(v){['home','own','found'].forEach(s=>$(s).classList.toggle('hide',s!=v));if(v=='own')loadSaved()}
+let scanned='';const F=['name','phone','email','school','item'];
+function go(v){['home','own','found'].forEach(s=>$(s).classList.toggle('hide',s!=v));if(v=='own'){loadSaved();if(scanned&&!$('ids').value)$('ids').value=scanned}if(v=='found'&&scanned&&!$('fid').value){$('fid').value=scanned;lookup()}}
 async function api(action,d){
   if(!C.API_URL){ // demo mode: browser only
     const db=JSON.parse(localStorage.t2u_db||'{}');
@@ -57,12 +55,12 @@ async function api(action,d){
     return{ok:true}}
   const r=await fetch(C.API_URL,{method:'POST',body:JSON.stringify({action,...d})});return r.json()}
 function loadSaved(){const s=JSON.parse(localStorage.t2u_owner||'null');if(!s)return;F.forEach(k=>$(k).value=s[k]||$(k).value);$('saved').classList.remove('hide')}
-function clearSaved(){localStorage.removeItem('t2u_owner');F.forEach(k=>$(k).value=k=='show'?'yes':'');$('saved').classList.add('hide')}
+function clearSaved(){localStorage.removeItem('t2u_owner');F.forEach(k=>$(k).value='');$('saved').classList.add('hide')}
 $('form').onsubmit=async e=>{e.preventDefault();const o=$('ownmsg');
   const tagIds=[...new Set($('ids').value.split(/[\s,;]+/).map(norm).filter(x=>x.length>=4))];
   if(!tagIds.length)return o.innerHTML='<div class="msg err">Enter a valid tag ID.</div>';
   if(!$('email').value.trim())return o.innerHTML='<div class="msg err">Add an email so we can notify you.</div>';
-  const d={tagIds};F.forEach(k=>d[k]=$(k).value.trim());o.textContent='Saving…';
+  const d={tagIds,show:'no'};F.forEach(k=>d[k]=$(k).value.trim());o.textContent='Saving…';
   try{const r=await api('activate',d);if(!r.ok)throw 0;
     const good=r.results.filter(x=>x.ok).map(x=>x.id),bad=r.results.filter(x=>!x.ok).map(x=>x.id);
     o.innerHTML='';const m=document.createElement('div');m.className='msg '+(good.length?'ok':'err');
@@ -77,14 +75,12 @@ async function lookup(){const id=norm($('fid').value),o=$('result');o.textConten
       const b=el('button','Activate it');b.onclick=()=>{$('ids').value=id;go('own')};return o.append(b)}
     const c=el('div','','card');c.append(el('h3',(d.name||'Someone')+' owns this'));
     if(d.item)c.append(el('div','Item: '+d.item));if(d.school)c.append(el('div','School: '+d.school));
-    if(d.phone)c.append(el('a','📞 Call '+d.phone,'btn','tel:'+d.phone.replace(/[^0-9+]/g,'')));
-    if(d.email)c.append(el('a','✉️ Email '+d.email,'btn alt','mailto:'+encodeURI(d.email)));
-    if(!d.phone&&!d.email)c.append(el('p','The owner prefers messages — use the form below.','hint'));
+    c.append(el('p','Use the form below to email the owner. Their contact details stay private.','hint'));
     o.append(c);$('msgbox').classList.remove('hide');
   }catch(err){o.innerHTML='';o.append(el('div','Couldn\'t look that up. ('+err+')','msg err'))}}
 $('msgbox').onsubmit=async e=>{e.preventDefault();const o=$('sendmsg');o.textContent='Sending…';
   try{const r=await api('message',{tagId:norm($('fid').value),where:$('where').value,note:$('note').value,from:$('from').value});
     o.innerHTML=r.ok?'<div class="msg ok">Sent — thank you!</div>':'<div class="msg err">Couldn\'t send.</div>'}catch(_){o.innerHTML='<div class="msg err">Couldn\'t send.</div>'}};
 const q=new URLSearchParams(location.search).get('t');
-if(q){go('found');$('fid').value=norm(q);lookup()}else go('home');
+if(q)scanned=norm(q);go('home');
 </script></body></html>
